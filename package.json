@@ -1,0 +1,22 @@
+{
+  "name": "zakuphub-1c-commerce-ml",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "dev:tunnel": "CLOUDFLARED_TUNNEL_ENABLED=true node --watch src/server.js",
+    "start": "node src/server.js",
+    "start:tunnel": "CLOUDFLARED_TUNNEL_ENABLED=true node src/server.js",
+    "check": "find src -name '*.js' -print0 | xargs -0 -n1 node --check"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.6",
+    "cloudflared": "^0.7.1",
+    "dotenv": "^17.3.1",
+    "hono": "^4.10.7"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

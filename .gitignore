@@ -1,0 +1,7 @@
+.idea
+node_modules/
+.env
+uploads/*
+!uploads/.gitkeep
+logs/*
+!logs/.gitkeep
