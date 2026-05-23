@@ -75,6 +75,7 @@ function handleCheckAuth(context) {
 function handleInit(context) {
   const requestId = getRequestId(context);
   const auth = getAuthState(context);
+  const zip = appConfig.commerceZipEnabled ? 'yes' : 'no';
 
   log('info', 'init_requested', { requestId, auth });
 
@@ -85,11 +86,11 @@ function handleInit(context) {
 
   log('info', 'init_success', {
     requestId,
-    zip: 'no',
+    zip,
     fileLimit: appConfig.commerceFileLimitBytes,
   });
 
-  return success(`zip=no\nfile_limit=${appConfig.commerceFileLimitBytes}`);
+  return success(`zip=${zip}\nfile_limit=${appConfig.commerceFileLimitBytes}`);
 }
 
 async function handleFile(context) {
@@ -122,7 +123,7 @@ async function handleFile(context) {
     return failure('Missing request body');
   }
 
-  const sessionId = getCookie(context, appConfig.sessionCookieName) || 'basic-auth';
+  const sessionId = getUploadSessionId(context);
   const uploadTarget = createUploadTarget(filename, sessionId);
 
   log('info', 'file_upload_started', {
@@ -275,6 +276,10 @@ function readContentLength(context) {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getUploadSessionId(context) {
+  return getCookie(context, appConfig.sessionCookieName) || 'basic-auth';
 }
 
 function createEmptyOrdersXml() {
