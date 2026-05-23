@@ -52,7 +52,7 @@ export const appConfig = {
   uploadDir: resolveServicePath(process.env.UPLOAD_DIR?.trim() || 'uploads'),
   logDir: resolveServicePath(process.env.LOG_DIR?.trim() || 'logs'),
   sessionCookieName: process.env.SESSION_COOKIE_NAME?.trim() || 'commerce_ml_session',
-  commerceFileLimitBytes: Number.parseInt(process.env.COMMERCE_FILE_LIMIT_BYTES ?? '8192', 10),
+  commerceFileLimitBytes: Number.parseInt(process.env.COMMERCE_FILE_LIMIT_BYTES ?? '10485760', 10),
   cloudflared: {
     enabled: optionalBooleanEnv('CLOUDFLARED_TUNNEL_ENABLED'),
     bin: process.env.CLOUDFLARED_BIN?.trim() || 'cloudflared',

@@ -2,32 +2,37 @@ import { getCookie } from 'hono/cookie';
 import { appConfig } from '../config.js';
 import { createSession, getAuthState, getBasicAuthState } from '../auth/commerce-auth.js';
 import { getRequestId } from '../http/request-context.js';
-import { failure, success } from '../http/responses.js';
+import { failure, success, xml } from '../http/responses.js';
 import { log, serializeError } from '../logger.js';
 import { createUploadTarget, saveUploadStream } from '../storage/upload-storage.js';
 
-export function registerCommerceMlRoutes(app) {
-  app.all('/exchange', async (context) => {
-    const mode = context.req.query('mode');
+const commerceMlPaths = ['/exchange', '/1c_exchange.php'];
 
-    switch (mode) {
-      case 'checkauth':
-        return handleCheckAuth(context);
-      case 'init':
-        return handleInit(context);
-      case 'file':
-        return handleFile(context);
-      case 'import':
-        return handleImport(context);
-      default:
-        log('warn', 'unsupported_mode', {
-          requestId: getRequestId(context),
-          type: context.req.query('type') ?? null,
-          mode: mode ?? null,
-        });
-        return failure(`Unsupported mode: ${mode ?? 'empty'}`);
-    }
-  });
+export function registerCommerceMlRoutes(app) {
+  for (const path of commerceMlPaths) {
+    app.all(path, handleCommerceMlRequest);
+  }
+}
+
+async function handleCommerceMlRequest(context) {
+  const mode = context.req.query('mode');
+
+  switch (mode) {
+    case 'checkauth':
+      return handleCheckAuth(context);
+    case 'init':
+      return handleInit(context);
+    case 'file':
+      return handleFile(context);
+    case 'import':
+      return handleImport(context);
+    case 'query':
+      return handleQuery(context);
+    case 'success':
+      return handleSuccess(context);
+    default:
+      return unsupportedMode(context, mode);
+  }
 }
 
 function handleCheckAuth(context) {
@@ -55,7 +60,7 @@ function handleCheckAuth(context) {
   const response = success(`success\n${appConfig.sessionCookieName}\n${sessionId}`);
   response.headers.append(
     'set-cookie',
-    `${appConfig.sessionCookieName}=${sessionId}; Path=/exchange; HttpOnly; SameSite=Lax`,
+    `${appConfig.sessionCookieName}=${sessionId}; Path=/; HttpOnly; SameSite=Lax`,
   );
 
   log('info', 'checkauth_success', {
@@ -202,6 +207,65 @@ function handleImport(context) {
   return success();
 }
 
+function handleQuery(context) {
+  const requestId = getRequestId(context);
+  const auth = getAuthState(context);
+  const type = context.req.query('type') ?? null;
+
+  log('info', 'query_requested', {
+    requestId,
+    auth,
+    type,
+  });
+
+  if (!auth.authorized) {
+    log('warn', 'query_unauthorized', { requestId, auth, type });
+    return failure('Unauthorized', 401);
+  }
+
+  if (type !== 'sale') {
+    return unsupportedMode(context, 'query');
+  }
+
+  const body = createEmptyOrdersXml();
+
+  log('info', 'query_success', {
+    requestId,
+    type,
+    bytes: Buffer.byteLength(body),
+  });
+
+  return xml(body);
+}
+
+function handleSuccess(context) {
+  const requestId = getRequestId(context);
+  const auth = getAuthState(context);
+  const type = context.req.query('type') ?? null;
+
+  log('info', 'sale_success_requested', {
+    requestId,
+    auth,
+    type,
+  });
+
+  if (!auth.authorized) {
+    log('warn', 'sale_success_unauthorized', { requestId, auth, type });
+    return failure('Unauthorized', 401);
+  }
+
+  if (type !== 'sale') {
+    return unsupportedMode(context, 'success');
+  }
+
+  log('info', 'sale_success', {
+    requestId,
+    type,
+  });
+
+  return success();
+}
+
 function readContentLength(context) {
   const value = context.req.header('content-length');
 
@@ -211,4 +275,26 @@ function readContentLength(context) {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function createEmptyOrdersXml() {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    `<КоммерческаяИнформация ВерсияСхемы="2.03" ДатаФормирования="${formatCommerceMlDate(new Date())}">`,
+    '</КоммерческаяИнформация>',
+  ].join('\n');
+}
+
+function formatCommerceMlDate(date) {
+  return date.toISOString().slice(0, 19);
+}
+
+function unsupportedMode(context, mode) {
+  log('warn', 'unsupported_mode', {
+    requestId: getRequestId(context),
+    type: context.req.query('type') ?? null,
+    mode: mode ?? null,
+  });
+
+  return failure(`Unsupported mode: ${mode ?? 'empty'}`);
 }
