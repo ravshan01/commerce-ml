@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "start:tunnel": "CLOUDFLARED_TUNNEL_ENABLED=true node src/server.js",
     "check": "find src -name '*.js' -print0 | xargs -0 -n1 node --check"
   },
   "dependencies": {
