@@ -3,11 +3,11 @@
 Cloudflare Tunnel:
 
 ```bash
-cloudflared tunnel --url http://localhost:3006
+cloudflared tunnel --url http://localhost:3010
 ```
 
 ngrok:
 
 ```bash
-ngrok http 3006
+ngrok http 3010
 ```
